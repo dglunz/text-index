@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -49,6 +50,7 @@ func NewHandler() *Handler {
 
 	// Setup request multiplexer
 	h.mux.HandleFunc("/index", h.serveIndex).Methods("POST")
+	h.mux.HandleFunc("/query", h.serveQuery).Methods("POST")
 
 	return h
 }
@@ -61,4 +63,33 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // serveIndex accepts a file for upload
 func (h *Handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 	// TODO: accept file upload
+	fmt.Println("upload")
+}
+
+// serveQuery accepts a query string and returns a JSON index of {name:line_number:word_number}
+func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request) {
+	// Parse the statement.
+	//stmt, err := pieql.NewParser(r.Body).Parse()
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+
+	// Get the query param from the request
+	param := r.FormValue("query")
+	fmt.Println(param)
+
+	// Execute the statement.
+	//res, err := h.db.Execute(stmt)
+	//if err != nil {
+	//http.Error(w, err.Error(), http.StatusInternalServerError)
+	//return
+	//}
+
+	// Write the results.
+	jw, err := json.Marshal(w)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	os.Stdout.Write(jw)
 }
