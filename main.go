@@ -84,7 +84,7 @@ func (h *Handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Copy file into tmp directory
-		dst, err := os.Create("/tmp/" + part.FileName())
+		dst, err := os.Create("./tmp/" + part.FileName())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
