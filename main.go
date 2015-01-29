@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -62,8 +63,42 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // serveIndex accepts a file for upload
 func (h *Handler) serveIndex(w http.ResponseWriter, r *http.Request) {
-	// TODO: accept file upload
-	fmt.Println("upload")
+	// Parse the multipart form in the request
+	//get the multipart reader for the request.
+	reader, err := r.MultipartReader()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Copy each part to destination.
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+
+		// If part.FileName() is empty, skip this iteration.
+		if part.FileName() == "" {
+			continue
+		}
+
+		// Copy file into tmp directory
+		dst, err := os.Create("/tmp/" + part.FileName())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer dst.Close()
+
+		if _, err := io.Copy(dst, part); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Display success message.
+	fmt.Println("Upload successful")
 }
 
 // serveQuery accepts a query string and returns a JSON index of {name:line_number:word_number}
@@ -76,8 +111,8 @@ func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request) {
 	//}
 
 	// Get the query param from the request
-	param := r.FormValue("query")
-	fmt.Println(param)
+	q := r.FormValue("query")
+	fmt.Println(q)
 
 	// Execute the statement.
 	//res, err := h.db.Execute(stmt)
