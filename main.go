@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/blevesearch/bleve"
 	"github.com/gorilla/mux"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -19,6 +19,8 @@ func main() {
 
 const (
 	DefaultBindAddress = ":1134"
+	//SplitOn = " ,-,--"
+	//DeleteOn = regex./\W|_/
 )
 
 func runServer(args []string) {
@@ -39,6 +41,7 @@ func runServer(args []string) {
 
 // Handler represents the HTTP handler.
 type Handler struct {
+	ind map[string]string
 	mux *mux.Router
 }
 
@@ -63,39 +66,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // serveIndex accepts a file for upload
 func (h *Handler) serveIndex(w http.ResponseWriter, r *http.Request) {
-	// Parse the multipart form in the request
-	//get the multipart reader for the request.
+	// Get the multipart reader for the request.
 	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Copy each part to destination.
-	for {
-		part, err := reader.NextPart()
-		if err == io.EOF {
-			break
-		}
+	mapping := bleve.NewIndexMapping()
+	index, _ := bleve.New("classics.bleve")
+	index.Index()
 
-		// If part.FileName() is empty, skip this iteration.
-		if part.FileName() == "" {
-			continue
-		}
-
-		// Copy file into tmp directory
-		dst, err := os.Create("./tmp/" + part.FileName())
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer dst.Close()
-
-		if _, err := io.Copy(dst, part); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
+	fmt.Println(reader)
 
 	// Display success message.
 	fmt.Println("Upload successful")
@@ -103,26 +85,18 @@ func (h *Handler) serveIndex(w http.ResponseWriter, r *http.Request) {
 
 // serveQuery accepts a query string and returns a JSON index of {name:line_number:word_number}
 func (h *Handler) serveQuery(w http.ResponseWriter, r *http.Request) {
-	// Parse the statement.
-	//stmt, err := pieql.NewParser(r.Body).Parse()
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-
 	// Get the query param from the request
 	q := r.FormValue("query")
 	fmt.Println(q)
 
-	// Execute the statement.
-	//res, err := h.db.Execute(stmt)
-	//if err != nil {
-	//http.Error(w, err.Error(), http.StatusInternalServerError)
-	//return
-	//}
+	// Execute the query.
+	index, _ := bleve.Open("classics.bleve")
+	query := bleve.NewQueryStringQuery(q)
+	searchRequest := bleve.NewSearchRequest(query)
+	searchResult, _ := index.Search(searchRequest)
 
 	// Write the results.
-	jw, err := json.Marshal(w)
+	jw, err := json.Marshal(res)
 	if err != nil {
 		fmt.Println("error:", err)
 	}
